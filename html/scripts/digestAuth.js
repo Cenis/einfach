@@ -18,7 +18,7 @@ function loadData(event) {
     fetch(url)
         .then(response => {
             // Since you're not yet authenticated, we expect the request to fail...
-            const unauthorized = 0; // TODO: Insert correct http response code here (Unauthorized) */
+            const unauthorized = 401; // HTTP response code for Unauthorized
             if (response.status === unauthorized) {
                 return extractWwwAuthenticateHeaderData(response);
             } else {
@@ -30,7 +30,7 @@ function loadData(event) {
         })
         .then(generateDigestAuthenticationData)
         .then(digestParameters => {
-            const stringParts = Object.entries(digestParameters).map(([key, value]) => `${key}=${value}`);
+            const stringParts = Object.entries(digestParameters).map(([key, value]) => `${key}="${value}"`);
             const digest = stringParts.join(', ');
             return fetch(url, {
                 headers: {
@@ -89,22 +89,38 @@ function generateDigestAuthenticationData(wwwAuthenticationHeaderData) {
     // Read credentials from input fields
     const [username, password] = getCredentials();
 
-    /**
-     * TODO: Implement this function!
-     * Stick to the structure given by the below comments and don't forget to read the doc-block of this function ;-)
-     */
-
     // Generate values for 'nc' and 'cnonce'. These values might be fictional (but sensible).
+    const nc = "00000001"; // Nonce count - starts at 1, formatted as 8-digit hex
+    const cnonce = Math.random().toString(36).substring(2, 15); // Client nonce - random string
 
-
+    // Extract values from WWW-Authenticate header
+    const realm = wwwAuthenticationHeaderData.realm;
+    const nonce = wwwAuthenticationHeaderData.nonce;
+    const qop = wwwAuthenticationHeaderData.qop || "auth";
+    const algorithm = wwwAuthenticationHeaderData.algorithm || "MD5";
+    const uri = path; // The URI from the original request
 
     // Generate hashes (usually called ha1, ha2 and response)
-
-
+    // HA1 = MD5(username:realm:password)
+    const ha1 = md5(`${username}:${realm}:${password}`);
+    
+    // HA2 = MD5(method:uri) - method is GET in our case
+    const ha2 = md5(`GET:${uri}`);
+    
+    // Response = MD5(HA1:nonce:nc:cnonce:qop:HA2)
+    const responseHash = md5(`${ha1}:${nonce}:${nc}:${cnonce}:${qop}:${ha2}`);
 
     // Return digest header data as a javascript object containing all (nine) relevant directives.
     return {
-        // username, realm, and so on...
+        username: username,
+        realm: realm,
+        nonce: nonce,
+        uri: uri,
+        algorithm: algorithm,
+        response: responseHash,
+        qop: qop,
+        nc: nc,
+        cnonce: cnonce
     };
 }
 

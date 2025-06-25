@@ -1,0 +1,5 @@
+AuthType Digest
+AuthName "Protected Area"
+AuthDigestDomain /protected/
+AuthDigestFile /var/www/html/protected/.htpasswd
+Require valid-user
